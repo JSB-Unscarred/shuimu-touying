@@ -16,7 +16,7 @@
 ```typst
 #import "@preview/thu-touying:0.1.0": *
 
-#show: THUTouying-theme.with(
+#show: thu-touying-theme.with(
   config-info(
     title: [汇报标题],
     subtitle: [副标题],
