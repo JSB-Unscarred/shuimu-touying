@@ -339,8 +339,6 @@
 #let outline-slide(
   config: (:),
   title: utils.i18n-outline-title,
-  numbered: true,
-  level: none,
   ..args,
 ) = touying-slide-wrapper(self => {
   self.store.title = title
@@ -349,22 +347,31 @@
     config: config,
     std.align(
       self.store.align,
-      components.adaptive-columns(
-        text(
-          fill: self.colors.primary,
-          weight: "bold",
-          components.custom-progressive-outline(
-            level: level,
-            alpha: self.store.alpha,
-            indent: (0em, 1em),
-            vspace: (.4em,),
-            numbered: (numbered,),
-            depth: 1,
-            ..args.named(),
-          ),
-        ),
-      )
-        + args.pos().sum(default: none),
+      context {
+        set text(fill: self.colors.primary-dark, weight: "bold", size: 1.2em)
+        
+        // 1. 获取章节数据
+        let sections = get-sections(self)
+        
+        // 2. 渲染为标准列表
+        if sections.len() > 0 {
+          list(
+            // 自定义列表符号：使用主色的实心圆点
+            marker: text(fill: self.colors.primary-dark)[●], 
+            // 列表间距
+            body-indent: 0.5em,
+            indent: 1em,
+            spacing: 1.5em, 
+            
+            // 3. 循环生成列表项
+            ..sections.map(section => {
+              link(section.loc, section.title)
+            })
+          )
+        } else {
+          [No sections found.]
+        }
+      }
     ),
   )
 })
