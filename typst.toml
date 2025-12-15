@@ -5,4 +5,4 @@ entrypoint = "lib.typ"   # 入口文件：指向你的主代码文件
 authors = ["Mason Chen"]  # 你的名字
 license = "MIT"          # 协议
 description = "A clean, Beamer-style presentation template for Tsinghua University."
-repository = ""
+repository = "https://github.com/JSB-Unscarred/thu-touying"
