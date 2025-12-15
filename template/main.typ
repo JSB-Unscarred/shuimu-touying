@@ -1,4 +1,4 @@
-#import "../lib.typ": *
+#import "@preview/thu-touying:0.1.0": *
 
 #show: THUTouying-theme.with(
   config-info(
@@ -11,6 +11,8 @@
 )
 
 #title-slide()
+
+#outline-slide()
 
 = 项目背景
 
