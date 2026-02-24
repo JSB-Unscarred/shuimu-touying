@@ -1,5 +1,5 @@
-#import "@preview/shuimu-touying:0.2.0": *
-// #import "../lib.typ": *
+//#import "@preview/shuimu-touying:0.2.0": *
+#import "../lib.typ": *
 
 #show: shuimu-touying-theme.with(
   config-info(
