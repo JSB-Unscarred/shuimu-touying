@@ -201,33 +201,8 @@
 /// 页面蓝图 (The Blueprints)
 /// 这里定义了不同类型的幻灯片（普通页、封面、目录、章节页、结束页）的逻辑
 
-/// Default slide function for the presentation.
-///
-/// - title (string): The title of the slide. Default is `auto`.
-///
-/// - config (dictionary): The configuration of the slide. You can use `config-xxx` to set the configuration of the slide. For more several configurations, you can use `utils.merge-dicts` to merge them.
-///
-/// - repeat (auto): The number of subslides. Default is `auto`, which means touying will automatically calculate the number of subslides.
-///
-///   The `repeat` argument is necessary when you use `#slide(repeat: 3, self => [ .. ])` style code to create a slide. The callback-style `uncover` and `only` cannot be detected by touying automatically.
-///
-/// - setting (dictionary): The setting of the slide. You can use it to add some set/show rules for the slide.
-///
-/// - composer (function): The composer of the slide. You can use it to set the layout of the slide.
-///
-///   For example, `#slide(composer: (1fr, 2fr, 1fr))[A][B][C]` to split the slide into three parts. The first and the last parts will take 1/4 of the slide, and the second part will take 1/2 of the slide.
-///
-///   If you pass a non-function value like `(1fr, 2fr, 1fr)`, it will be assumed to be the first argument of the `components.side-by-side` function.
-///
-///   The `components.side-by-side` function is a simple wrapper of the `grid` function. It means you can use the `grid.cell(colspan: 2, ..)` to make the cell take 2 columns.
-///
-///   For example, `#slide(composer: 2)[A][B][#grid.cell(colspan: 2)[Footer]]` will make the `Footer` cell take 2 columns.
-///
-///   If you want to customize the composer, you can pass a function to the `composer` argument. The function should receive the contents of the slide and return the content of the slide, like `#slide(composer: grid.with(columns: 2))[A][B]`.
-///
-/// - bodies (content): The contents of the slide. You can call the `slide` function with syntax like `#slide[A][B][C]` to create a slide.
-/// 
 /// 1. 正文页 (Slide)
+/// 
 #let slide(
   title: auto,
   header: auto,
@@ -270,22 +245,7 @@
 
 
 /// 2. 封面页 (Title Slide)
-/// Title slide for the presentation. You should update the information in the `config-info` function. You can also pass the information directly to the `title-slide` function.
-///
-/// Example:
-///
-/// ```typst
-/// #show: stargazer-theme.with(
-///   config-info(
-///     title: [Title],
-///     logo: emoji.city,
-///   ),
-/// )
-///
-/// #title-slide(subtitle: [Subtitle])
-/// ```
-///
-/// - config (dictionary): The configuration of the slide. You can use `config-xxx` to set the configuration of the slide. For more several configurations, you can use `utils.merge-dicts` to merge them.
+
 #let title-slide(config: (:), ..args) = touying-slide-wrapper(self => {
   self = utils.merge-dicts(
     self,
@@ -294,18 +254,19 @@
   self.store.title = none // 封面不需要页眉标题
   let info = self.info + args.named()
 
-  // 处理多作者的情况
-  info.authors = {
-    let authors = if "authors" in info {
-      info.authors
-    } else {
-      info.author
-    }
-    if type(authors) == array {
-      authors
-    } else {
-      (authors,)
-    }
+  // 辅助：将单个值统一转为数组
+  let to-arr(v) = if type(v) == array { v } else { (v,) }
+
+  // 构建 (前缀, 姓名数组) 列表
+  let person-entries = ()
+  if "author" in info and info.author != none {
+    person-entries.push(("作者：", to-arr(info.author)))
+  } 
+  if "reporter" in info and info.reporter != none {
+    person-entries.push(("报告人：", to-arr(info.reporter)))
+  }
+  if "supervisor" in info and info.supervisor != none {
+    person-entries.push(("导师：", to-arr(info.supervisor)))
   }
 
   let body = {
@@ -335,13 +296,18 @@
       },
     )
 
-    // 作者列表
-    grid(
-      columns: (1fr,) * calc.min(info.authors.len(), 3),
-      column-gutter: 1em,
-      row-gutter: 1em,
-      ..info.authors.map(author => text(fill: black, author)),
-    )
+    // 人员列表（每个角色一行，前缀 + 姓名横排，整体居中）
+    for (prefix, persons) in person-entries {
+      align(center,
+        grid(
+          columns: (auto,) + (auto,) * calc.min(persons.len(), 3),
+          column-gutter: 0.5em,
+          row-gutter: 0.5em,
+          text(fill: black, prefix),
+          ..persons.map(p => text(fill: black, p)),
+        )
+      )
+    }
     v(0.5em)
     
     // 机构与日期
@@ -361,15 +327,7 @@
 
 
 /// 3. 目录页 (Outline Slide)
-/// Outline slide for the presentation.
-///
-/// - config (dictionary): is the configuration of the slide. You can use `config-xxx` to set the configuration of the slide. For more several configurations, you can use `utils.merge-dicts` to merge them.
-///
-/// - title (string): is the title of the outline. Default is `utils.i18n-outline-title`.
-///
-/// - level (int, none): is the level of the outline. Default is `none`.
-///
-/// - numbered (boolean): is whether the outline is numbered. Default is `true`.
+
 #let outline-slide(
   config: (:),
   title: utils.i18n-outline-title,
@@ -413,19 +371,7 @@
 
 /// 4. 章节页 (New Section Slide)
 /// 本质上是带标题的目录页
-/// New section slide for the presentation. You can update it by updating the `new-section-slide-fn` argument for `config-common` function.
-///
-/// Example: `config-common(new-section-slide-fn: new-section-slide.with(numbered: false))`
-///
-/// - config (dictionary): is the configuration of the slide. You can use `config-xxx` to set the configuration of the slide. For more several configurations, you can use `utils.merge-dicts` to merge them.
-///
-/// - title (content, function): is the title of the section. The default is `utils.i18n-outline-title`.
-///
-/// - level (int): is the level of the heading. The default is `1`.
-///
-/// - numbered (boolean): is whether the heading is numbered. The default is `true`.
-///
-/// - body (none): is the body of the section. It will be passed by touying automatically.
+
 #let new-section-slide(
   config: (:),
   title: auto,
@@ -458,13 +404,7 @@
 
 
 /// 5. 焦点页 (Focus Slide)
-/// Focus on some content.
-///
-/// Example: `#focus-slide[Wake up!]`
-///
-/// - config (dictionary): is the configuration of the slide. You can use `config-xxx` to set the configuration of the slide. For more several configurations, you can use `utils.merge-dicts` to merge them.
-///
-/// - align (alignment): is the alignment of the content. The default is `horizon + center`.
+
 #let focus-slide(
   config: (:),
   align: horizon + center,
@@ -485,91 +425,9 @@
 })
 
 
-/// 6. 结束页 (Ending Slide)
-/// End slide for the presentation.
-///
-/// - config (dictionary): is the configuration of the slide. You can use `config-xxx` to set the configuration of the slide. For more several configurations, you can use `utils.merge-dicts` to merge them.
-///
-/// - title (string): is the title of the slide. The default is `none`.
-///
-/// - body (array): is the content of the slide.
-#let ending-slide(config: (:), title: none, body) = touying-slide-wrapper(
-  self => {
-    let content = {
-      set std.align(center + horizon)
-      if title != none {
-        block(
-          fill: self.colors.primary,
-          inset: (top: 0.7em, bottom: 0.7em, left: 3em, right: 3em),
-          radius: 0.5em,
-          text(size: 1.5em, fill: self.colors.neutral-lightest, title),
-        )
-      }
-      body
-    }
-    touying-slide(self: self, config: config, content)
-  },
-)
-
-
-
-
 /// 主题入口与全局配置 (The Architect)
 /// 将所有组件组装在一起
 
-
-/// Touying stargazer theme.
-///
-/// Example:
-///
-/// ```typst
-/// #show: shuimu-touying-theme.with(aspect-ratio: "16-9", config-colors(primary: blue))`
-/// ```
-///
-/// Consider using:
-///
-/// ```typst
-/// #set text(font: "Fira Sans", weight: "light", size: 20pt)`
-/// #show math.equation: set text(font: "Fira Math")
-/// #set strong(delta: 100)
-/// #set par(justify: true)
-/// ```
-/// The default colors:
-///
-/// ```typst
-/// config-colors(
-///   primary: rgb("#660874"),
-///   primary-dark: rgb("#004078"),
-///   secondary: rgb("#ffffff"),
-///   tertiary: rgb("#005bac"),
-///   neutral-lightest: rgb("#ffffff"),
-///   neutral-darkest: rgb("#000000"),
-/// )
-/// ```
-///
-/// - aspect-ratio (string): is the aspect ratio of the slides. The default is `16-9`.
-///
-/// - align (alignment): is the alignment of the content. The default is `horizon`.
-///
-/// - title (content, function): is the title in the header of the slide. The default is `self => utils.display-current-heading(depth: self.slide-level)`.
-///
-/// - header-right (content, function): is the right part of the header. The default is `self => self.info.logo`.
-///
-/// - footer (content, function): is the footer of the slide. The default is `none`.
-///
-/// - footer-right (content, function): is the right part of the footer. The default is `context utils.slide-counter.display() + " / " + utils.last-slide-number`.
-///
-/// - progress-bar (boolean): is whether to show the progress bar in the footer. The default is `true`.
-///
-/// - footer-columns (array): is the columns of the footer. The default is `(25%, 25%, 1fr, 5em)`.
-///
-/// - footer-a (content, function): is the left part of the footer. The default is `self => self.info.author`.
-///
-/// - footer-b (content, function): is the second left part of the footer. The default is `self => utils.display-info-date(self)`.
-///
-/// - footer-c (content, function): is the second right part of the footer. The default is `self => if self.info.short-title == auto { self.info.title } else { self.info.short-title }`.
-///
-/// - footer-d (content, function): is the right part of the footer. The default is `context utils.slide-counter.display() + " / " + utils.last-slide-number`.
 #let shuimu-touying-theme(
   aspect-ratio: "16-9",
   align: horizon,
@@ -579,14 +437,17 @@
   // 删除了 unused header-right
   // 删除了 ununsed progress-bar
   // 页脚各部分配置（可通过传参修改）
-  footer-columns: (35%, 1fr, 5em),
-  footer-a: self => self.info.author,
-  // 删除了 unused footer-b 的参数定义
+  footer-a: self => self.info.reporter,
+
+  footer-b: self => self.info.author,
+
+
   footer-c: self => if self.info.short-title == auto {
     self.info.title
   } else {
     self.info.short-title
   },
+  
   footer-d: context utils.slide-counter.display()
     + " / "
     + utils.last-slide-number,
@@ -663,18 +524,18 @@
       primary-dark: rgb("#320439"),
       neutral-lightest: rgb("#ffffff"),
       neutral-darkest: rgb("#000000"),
-    ),
+  ),
     // save the variables for later use
     config-store(
       align: align,
       alpha: alpha,
       title: title,
-      footer-columns: footer-columns,
       footer-a: footer-a,
+      footer-b: footer-b,
       footer-c: footer-c,
       footer-d: footer-d,
 
-      // 删除了 unused navigation 键
+      // 删除了 navigation 键
       
       header: self => if self.store.title != none {
         block(
@@ -695,6 +556,7 @@
       },
  
       footer: self => {
+        show strong: it => it.body
         let cell(fill: none, it) = rect(
           width: 100%,
           height: 100%,
@@ -704,21 +566,24 @@
           stroke: none,
           std.align(horizon, text(fill: self.colors.neutral-lightest, it)),
         )
+
+        let footer-a = utils.call-or-display(self, self.store.footer-a)
+        let footer-b = utils.call-or-display(self, self.store.footer-b)
+        let footer-c = utils.call-or-display(self, self.store.footer-c)
+        let footer-d = utils.call-or-display(self, self.store.footer-d)
+
         grid(
-          columns: self.store.footer-columns,
+          columns: (
+            if footer-a != none { 15% } else { 0pt },
+            if footer-b != none { 15% } else { 0pt },
+            1fr,
+            5em,
+          ),
           rows: (1.5em, auto),
-          cell(fill: self.colors.primary, utils.call-or-display(
-            self,
-            self.store.footer-a,
-          )),
-          cell(fill: self.colors.primary, utils.call-or-display(
-            self,
-            self.store.footer-c,
-          )),
-          cell(fill: self.colors.primary, utils.call-or-display(
-            self,
-            self.store.footer-d,
-          )),
+          cell(fill: self.colors.primary, if footer-a != none { footer-a }),
+          cell(fill: self.colors.primary, if footer-b != none { footer-b }),
+          cell(fill: self.colors.primary, footer-c),
+          cell(fill: self.colors.primary, footer-d),
         )
       },
     ),
