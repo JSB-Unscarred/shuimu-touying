@@ -24,7 +24,7 @@
 
 在工作目录下新建终端，并运行以下命令：
 
-```
+```typst
 typst init @preview/shuimu-touying:0.2.0 my-slide
 ```
 

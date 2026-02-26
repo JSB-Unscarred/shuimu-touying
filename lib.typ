@@ -17,7 +17,7 @@
 
     // 1. 顶部标题栏
     block(
-      fill: self.colors.primary, //这里从primary-dark改为primary
+      fill: self.colors.primary-dark, //这里从primary-dark改为primary
       width: 100%,
       radius: (top: 6pt),
       inset: (top: 0.4em, bottom: 0.3em, left: 0.5em, right: 0.5em),
@@ -471,7 +471,7 @@
       footer: footer,
       header-ascent: 0em,
       footer-descent: 0em,
-      margin: (top: 3.5em, bottom: 2.5em, x: 2.5em),
+      margin: (top: 4.5em, bottom: 2.5em, x: 2.5em),
     ),
     config-common(
       slide-fn: slide,
@@ -488,6 +488,7 @@
         show figure.caption: set text(size: 0.6em)
         show footnote.entry: set text(size: 0.6em)
         show heading: set text(fill: self.colors.primary,weight: "black")
+        set super(typographic: false) // 关闭字体默认的上标样式，防止冲突
         show link: it => if type(it.dest) == str {
           set text(fill: self.colors.primary)
           it
@@ -495,7 +496,6 @@
           it
         }
         show figure.where(kind: table): set figure.caption(position: top)
-
         body
       },
       alert: utils.alert-with-primary-color,
