@@ -8,7 +8,7 @@
 ![标题页](assets/thumbnail.webp)
 ![目录页](assets/docs/目录页.webp)
 ![正文页](assets/docs/正文页.webp)
-
+![参考文献页](assets/docs/参考文献页.webp)
 ## 使用方法
 
 ### 安装字体
@@ -17,7 +17,7 @@
 ### 方式一：使用 Typst Universe (推荐)
 
 ```typst
-#import "@preview/shuimu-touying:0.2.0": *
+#import "@preview/shuimu-touying:0.3.0": *
 ```
 
 ### 方式二：typst init命令
@@ -25,6 +25,6 @@
 在工作目录下新建终端，并运行以下命令：
 
 ```typst
-typst init @preview/shuimu-touying:0.2.0 my-slide
+typst init @preview/shuimu-touying:0.3.0 my-slide
 ```
 
