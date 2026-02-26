@@ -22,13 +22,37 @@
 - #lorem(50)
 
 = 研究内容
-//#_tblock([sss],title: [sss])
 == 研究计划
 
-- #lorem(200)
+- #lorem(150)
+
+#tblock(
+  title: [无编号公式],
+  [$ e^(pi i)+1=0 $]
+)
 
 == 工作进度
-- #lorem(100)
+
+// 设置*全局*公式编号格式为 (1)，(2)，...
+// 也就是说在这个命令之后的公式都会带上编号，可以随意调整这个命令的位置
+#set math.equation(numbering: "(1)") 
+
+#tblock(
+  title: [有编号公式],
+  [$ 0+0=0 $]
+)
+
+#tblock(
+  title: [部分无编号公式],
+  [#math.equation(block: true, numbering: none)[
+  $ 1 + 1 = 2 $
+]]
+)
+
+#tblock(
+  title:[继续编号],
+  [$ 2+2=4 $]
+)
 
 #focus-slide([Wake Up!])
 

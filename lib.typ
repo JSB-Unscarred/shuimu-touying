@@ -7,51 +7,49 @@
 
 
 /// 基础视觉组件 (The Bricks)
-/// 这里定义了页面内部的小组件，比如“定理块”或者带有特定样式的方块
 
 /// 文本块
 #let _tblock(self: none, title: none, it) = {
-  grid(
+  block(
+    breakable: false,
+    grid(
     columns: 1,
     row-gutter: 0pt,
 
-    // 1. 顶部标题栏
-    block(
-      fill: self.colors.primary-dark, //这里从primary-dark改为primary
-      width: 100%,
-      radius: (top: 6pt),
-      inset: (top: 0.4em, bottom: 0.3em, left: 0.5em, right: 0.5em),
-      text(fill: self.colors.neutral-lightest, weight: "bold", title),
-    ),
-
-    // 2. 渐变分割线
-    rect(
-      fill: gradient.linear(
-        self.colors.primary,  //这里从primary-dark改为primary
-        self.colors.primary.lighten(90%),
-        angle: 90deg,
+      // 1. 顶部标题栏
+      block(
+        fill: self.colors.primary,
+        width: 100%,
+        radius: (top: 6pt),
+        inset: (top: 0.4em, bottom: 0.3em, left: 0.5em, right: 0.5em),
+        text(fill: self.colors.neutral-lightest, weight: "bold", title),
       ),
-      width: 100%,
-      height: 4pt,
-    ),
 
-    // 3. 底部内容区域
-    block(
-      fill: self.colors.primary.lighten(90%),
-      width: 100%,
-      radius: (bottom: 6pt),
-      inset: (top: 0.4em, bottom: 0.5em, left: 0.5em, right: 0.5em),
-      it,
-    ),
+      // 2. 渐变分割线
+      rect(
+        fill: gradient.linear(
+          self.colors.primary,
+          self.colors.primary.lighten(90%),
+          angle: 90deg,
+        ),
+        width: 100%,
+        height: 4pt,
+      ),
+
+      // 3. 底部内容区域
+      block(
+        fill: self.colors.primary.lighten(90%),
+        width: 100%,
+        radius: (bottom: 6pt),
+        inset: (top: 0.4em, bottom: 0.5em, left: 0.5em, right: 0.5em),
+        it,
+      ),
+    )
   )
 }
 
 /// 导出函数：定理块 (Theorem Block) 的包装器
-/// Theorem block for the presentation.
-///
-/// - title (string): The title of the theorem. Default is `none`.
-///
-/// - it (content): The content of the theorem.
+
 #let tblock(title: none, it) = touying-fn-wrapper(_tblock.with(
   title: title,
   it,
@@ -59,7 +57,7 @@
 
 /// 辅助函数：获取文档的章节和子页面结构
 /// children 为该章节包含的所有物理页码数组（已排除 focus-slide 等标记了 skip 的页面）
-#let get-sections(self) = {
+#let _get-sections(self) = {
   let all-headings = query(heading.where(level: 1))
   let skip-pages = query(<touying-skip-dot>).map(s => s.location().page())
   // 用所有 heading 和 skip 标签中的最大页码来推断文档末尾
@@ -90,13 +88,13 @@
 
 
 /// Mini-frames 导航栏
-#let mini-frames-navigation(self: none) = {
+#let _mini-frames-navigation(self: none) = {
   let primary-color = self.colors.primary-dark 
   let text-color = self.colors.neutral-lightest
   
   context {
     // 获取章节结构和当前页码
-    let sections = get-sections(self)
+    let sections = _get-sections(self)
     let current-page = here().page()
     
     // 计算当前激活的是哪个章节 (Active Section)
@@ -323,7 +321,7 @@
         set text(fill: self.colors.primary-dark, weight: "bold", size: 1.2em)
         
         // 1. 获取章节数据
-        let sections = get-sections(self)
+        let sections = _get-sections(self)
         
         // 2. 渲染为标准列表
         if sections.len() > 0 {
@@ -446,7 +444,7 @@
       spacing: 0em,   // 去除中间的缝隙
       
       // 1. 顶部的导航栏
-      mini-frames-navigation(self: self),
+      _mini-frames-navigation(self: self),
       
       // 2. 下面的幻灯片标题栏
       utils.call-or-display(self, self.store.header)
