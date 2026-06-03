@@ -58,32 +58,37 @@
 /// 辅助函数：获取文档的章节和子页面结构
 /// children 为该章节包含的所有物理页码数组（已排除 focus-slide 等标记了 skip 的页面）
 #let _get-sections(self) = {
-  let all-headings = query(heading.where(level: 1))
-  let skip-pages = query(<touying-skip-dot>).map(s => s.location().page())
-  // 用所有 heading 和 skip 标签中的最大页码来推断文档末尾
-  let last-known-page = calc.max(
-    ..all-headings.map(h => h.location().page()),
-    ..skip-pages,
-    ..query(<touying-slide-page>).map(s => s.location().page()),
-  )
-  let sections = ()
+  let all-headings = query(heading.where(level: 1, outlined: true))
 
-  for (i, h) in all-headings.enumerate() {
-    let start-page = h.location().page()
-    let end-page = if i + 1 < all-headings.len() {
-      all-headings.at(i + 1).location().page()
-    } else {
-      last-known-page + 1
+  if all-headings.len() == 0 {
+    ()
+  } else {
+    let custom-skip-pages = query(<touying-skip-dot>).map(s => s.location().page())
+    let touying-skip-pages = query(<touying:skip>).map(s => s.location().page())
+    let skip-pages = custom-skip-pages + touying-skip-pages
+    let heading-pages = all-headings.map(h => h.location().page())
+    let slide-pages = query(<touying-slide-page>).map(s => s.location().page())
+    let known-pages = heading-pages + skip-pages + slide-pages
+    let last-known-page = calc.max(..known-pages)
+    let sections = ()
+
+    for (i, h) in all-headings.enumerate() {
+      let start-page = h.location().page()
+      let end-page = if i + 1 < all-headings.len() {
+        all-headings.at(i + 1).location().page()
+      } else {
+        last-known-page + 1
+      }
+
+      sections.push((
+        title: h.body,
+        loc: h.location(),
+        children: range(start-page, end-page).filter(p => p not in skip-pages),
+      ))
     }
 
-    sections.push((
-      title: h.body,
-      loc: h.location(),
-      children: range(start-page, end-page).filter(p => p not in skip-pages),
-    ))
+    sections
   }
-
-  sections
 }
 
 
