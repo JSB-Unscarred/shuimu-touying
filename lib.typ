@@ -6,17 +6,17 @@
 #import "@preview/touying:0.7.4": *
 
 
-/// 基础视觉组件 (The Bricks)
+/// 基础视觉组件
 
-/// 文本块
-#let _tblock(self: none, title: none, it) = {
+/// 渲染带标题栏的内容块，用于公式、定理、定义等需要被强调的内容。
+#let _render-titled-block(self: none, title: none, body) = {
   block(
     breakable: false,
     grid(
       columns: 1,
       row-gutter: 0pt,
 
-      // 1. 顶部标题栏
+      // 顶部标题栏
       block(
         fill: self.colors.primary,
         width: 100%,
@@ -25,7 +25,7 @@
         text(fill: self.colors.neutral-lightest, weight: "bold", title),
       ),
 
-      // 2. 渐变分割线
+      // 连接标题栏和内容区的渐变分割线
       rect(
         fill: gradient.linear(
           self.colors.primary,
@@ -36,134 +36,151 @@
         height: 4pt,
       ),
 
-      // 3. 底部内容区域
+      // 内容区
       block(
         fill: self.colors.primary.lighten(90%),
         width: 100%,
         radius: (bottom: 6pt),
         inset: (top: 0.4em, bottom: 0.5em, left: 0.5em, right: 0.5em),
-        it,
+        body,
       ),
     ),
   )
 }
 
-/// 导出函数：定理块 (Theorem Block) 的包装器
+/// 带标题栏的内容块，可在正文页中强调公式、定理、定义或阶段性结论。
+#let titled-block(title: none, body) = touying-fn-wrapper(
+  _render-titled-block.with(
+    title: title,
+    body,
+  ),
+)
 
-#let tblock(title: none, it) = touying-fn-wrapper(_tblock.with(
-  title: title,
-  it,
-))
+/// 收集 mini-frame 和目录页使用的章节导航数据。
+///
+/// 返回值中的每个章节包含：
+/// - heading-title: 一级标题内容。
+/// - heading-location: 一级标题位置，用于链接回章节起点。
+/// - slide-markers: 该章节下可导航的物理页标记，已排除 focus-slide 与 Touying skip 页。
+#let _collect-navigation-sections() = {
+  let section-headings = query(heading.where(level: 1, outlined: true))
 
-/// 辅助函数：获取文档的章节和子页面结构
-/// children 为该章节包含的所有物理页记录（已排除 focus-slide 等标记了 skip 的页面）
-#let _get-sections() = {
-  let all-headings = query(heading.where(level: 1, outlined: true))
-
-  if all-headings.len() == 0 {
+  if section-headings.len() == 0 {
     ()
   } else {
-    let custom-skip-pages = query(<touying-skip-dot>).map(s => s
+    let focus-slide-skip-pages = query(<touying-skip-dot>).map(s => s
       .location()
       .page())
     let touying-skip-pages = query(<touying:skip>).map(s => s.location().page())
-    let skip-pages = custom-skip-pages + touying-skip-pages
-    let heading-pages = all-headings.map(h => h.location().page())
-    let slide-locs = query(<touying-slide-page>).map(s => s.location())
-    let slide-pages = slide-locs.map(loc => loc.page())
-    let known-pages = heading-pages + skip-pages + slide-pages
+    let skipped-pages = focus-slide-skip-pages + touying-skip-pages
+    let heading-pages = section-headings.map(heading => heading
+      .location()
+      .page())
+    let slide-marker-locations = query(<touying-slide-page>).map(
+      marker => marker.location(),
+    )
+    let slide-pages = slide-marker-locations.map(location => location.page())
+    let known-pages = heading-pages + skipped-pages + slide-pages
     let last-known-page = calc.max(..known-pages)
-    let sections = ()
+    let navigation-sections = ()
 
-    for (i, h) in all-headings.enumerate() {
-      let start-page = h.location().page()
-      let end-page = if i + 1 < all-headings.len() {
-        all-headings.at(i + 1).location().page()
+    for (section-index, heading) in section-headings.enumerate() {
+      let section-start-page = heading.location().page()
+      let section-end-page = if section-index + 1 < section-headings.len() {
+        section-headings.at(section-index + 1).location().page()
       } else {
         last-known-page + 1
       }
 
-      sections.push((
-        title: h.body,
-        loc: h.location(),
-        children: slide-locs
-          .filter(loc => start-page <= loc.page() and loc.page() < end-page)
-          .filter(loc => loc.page() not in skip-pages)
-          .map(loc => (page: loc.page(), loc: loc)),
+      navigation-sections.push((
+        heading-title: heading.body,
+        heading-location: heading.location(),
+        slide-markers: slide-marker-locations
+          .filter(location => (
+            section-start-page <= location.page()
+              and location.page() < section-end-page
+          ))
+          .filter(location => location.page() not in skipped-pages)
+          .map(location => (page: location.page(), location: location)),
       ))
     }
 
-    sections
+    navigation-sections
   }
 }
 
 
 /// Mini-frames 导航栏
-#let _mini-frames-navigation(self: none) = {
-  let primary-color = self.colors.primary-dark
-  let text-color = self.colors.neutral-lightest
+#let _render-mini-frame-navigation(self: none) = {
+  let navigation-background = self.colors.primary-dark
+  let navigation-text-color = self.colors.neutral-lightest
 
   context {
-    // 获取章节结构和当前页码
-    let sections = _get-sections()
+    let navigation-sections = _collect-navigation-sections()
     let current-page = here().page()
 
-    // 计算当前激活的是哪个章节 (Active Section)
-    // 逻辑：找到最后一个起始页码小于等于当前页码的章节
-    let active-section-index = -1
-    for (i, section) in sections.enumerate() {
-      if section.loc.page() <= current-page {
-        active-section-index = i
+    // 当前章节是起始页不晚于当前页的最后一个一级标题。
+    let current-section-index = -1
+    for (section-index, section) in navigation-sections.enumerate() {
+      if section.heading-location.page() <= current-page {
+        current-section-index = section-index
       }
     }
 
     block(
       width: 100%,
-      fill: primary-color,
+      fill: navigation-background,
       inset: (top: 0.6em, bottom: 0.4em, x: 2em),
       {
         set text(size: 0.7em)
         set align(left + horizon)
 
         grid(
-          columns: sections.map(_ => auto),
+          columns: navigation-sections.map(_ => auto),
           column-gutter: 1.5em,
 
-          // 使用 enumerate 获取索引，以便判断是否为当前章节
-          ..sections
+          ..navigation-sections
             .enumerate()
-            .map(((i, section)) => {
-              // A. 判断本列是否需要高亮
-              let is-active-section = (i == active-section-index)
+            .map(((section-index, section)) => {
+              let is-current-section = (section-index == current-section-index)
 
-              // B. 定义颜色：激活章节用纯白，非激活章节用 60% 透明度的白(变暗)
-              let section-color = if is-active-section {
-                text-color
+              // 激活章节用实色，非激活章节降低透明度。
+              let navigation-item-color = if is-current-section {
+                navigation-text-color
               } else {
-                text-color.transparentize(60%)
+                navigation-text-color.transparentize(60%)
               }
 
-              // C. 渲染标题 (应用 section-color)
-              let title = link(
-                section.loc,
-                text(fill: section-color, weight: "bold", section.title),
+              let section-title-link = link(
+                section.heading-location,
+                text(
+                  fill: navigation-item-color,
+                  weight: "bold",
+                  section.heading-title,
+                ),
               )
 
-              // D. 渲染小圆点
-              let dots = if section.children.len() > 0 {
+              let slide-dot-links = if section.slide-markers.len() > 0 {
                 stack(
                   dir: ltr,
                   spacing: 4pt,
-                  ..section.children.map(child => {
-                    let is-current-page = (child.page == current-page)
+                  ..section.slide-markers.map(slide-marker => {
+                    let is-current-slide-marker = (
+                      slide-marker.page == current-page
+                    )
 
                     link(
-                      child.loc,
+                      slide-marker.location,
                       box(
                         circle(
                           radius: 2.5pt,
-                          stroke: (paint: section-color, thickness: 0.8pt),
-                          fill: if is-current-page { section-color } else {
+                          stroke: (
+                            paint: navigation-item-color,
+                            thickness: 0.8pt,
+                          ),
+                          fill: if is-current-slide-marker {
+                            navigation-item-color
+                          } else {
                             none
                           },
                         ),
@@ -178,8 +195,8 @@
               stack(
                 dir: ttb,
                 spacing: 0.4em,
-                title,
-                dots,
+                section-title-link,
+                slide-dot-links,
               )
             })
         )
@@ -191,11 +208,12 @@
 
 
 
-/// 页面蓝图 (The Blueprints)
+/// 页面蓝图
 /// 这里定义了不同类型的幻灯片（普通页、封面、目录、章节页、结束页）的逻辑
 
 /// 1. 正文页 (Slide)
 ///
+/// 继承主题默认页眉、页脚与正文对齐方式，也允许单页临时覆盖这些设置。
 #let slide(
   title: auto,
   header: auto,
@@ -212,25 +230,26 @@
     self.store.align = align
   }
   if title != auto {
-    self.store.title = title
+    self.store.header-title = title
   }
   if header != auto {
-    self.store.header = header
+    self.store.slide-header = header
   }
   if footer != auto {
-    self.store.footer = footer
+    self.store.footer-bar = footer
   }
-  let new-setting = body => {
+  let slide-setting = body => {
     show: std.align.with(self.store.align)
     show: setting
-    [#hide[#"" <touying-slide-page>]] // 注入物理页签，用于导航栏的页码检测
+    // mini-frame 导航通过这个隐藏标记定位每一张物理页。
+    [#hide[#"" <touying-slide-page>]]
     body
   }
   touying-slide(
     self: self,
     config: config,
     repeat: repeat,
-    setting: new-setting,
+    setting: slide-setting,
     composer: composer,
     ..bodies,
   )
@@ -239,60 +258,78 @@
 
 /// 2. 封面页 (Title Slide)
 
-#let _person-entry(prefix, persons, max-cols: 3) = {
-  if persons.len() == 0 {
+/// 将同一角色下的多人姓名拆成固定列数的网格，避免封面人员列表过宽。
+#let _render-cover-person-grid(
+  role-label,
+  person-list,
+  max-person-columns: 3,
+) = {
+  if person-list.len() == 0 {
     none
   } else {
-    let cells = ()
+    let grid-cells = ()
 
-    let start = 0
-    let row-index = 0
-    while start < persons.len() {
-      let row = persons.slice(start, calc.min(start + max-cols, persons.len()))
+    let row-start = 0
+    let role-row-index = 0
+    while row-start < person-list.len() {
+      let person-row = person-list.slice(row-start, calc.min(
+        row-start + max-person-columns,
+        person-list.len(),
+      ))
 
-      cells.push(text(fill: black, if row-index == 0 { prefix } else { [] }))
-      for person in row {
-        cells.push(text(fill: black, person))
+      grid-cells.push(text(fill: black, if role-row-index == 0 {
+        role-label
+      } else { [] }))
+      for person in person-row {
+        grid-cells.push(text(fill: black, person))
       }
-      cells += ([],) * (max-cols - row.len())
+      grid-cells += ([],) * (max-person-columns - person-row.len())
 
-      start += max-cols
-      row-index += 1
+      row-start += max-person-columns
+      role-row-index += 1
     }
 
     grid(
-      columns: (auto,) + (auto,) * max-cols,
+      columns: (auto,) + (auto,) * max-person-columns,
       column-gutter: 0.5em,
       row-gutter: 0.5em,
-      ..cells,
+      ..grid-cells,
     )
   }
 }
 
+/// 封面页。
 #let title-slide(config: (:), ..args) = touying-slide-wrapper(self => {
   self = utils.merge-dicts(
     self,
     config,
   )
-  self.store.title = none // 封面不需要页眉标题
-  let info = self.info + args.named()
+  self.store.header-title = none // 封面不需要页眉标题
+  let presentation-info = self.info + args.named()
 
-  // 辅助：将单个值统一转为数组
-  let to-arr(v) = if type(v) == array { v } else { (v,) }
+  let ensure-array(value) = if type(value) == array { value } else { (value,) }
 
-  // 构建 (前缀, 姓名数组) 列表
-  let person-entries = ()
-  if "author" in info and info.author != none {
-    person-entries.push(("作者：", to-arr(info.author)))
+  // 封面将每个角色渲染为一组“角色标签 + 人员姓名”行。
+  let cover-person-groups = ()
+  if "author" in presentation-info and presentation-info.author != none {
+    cover-person-groups.push(("作者：", ensure-array(presentation-info.author)))
   }
-  if "reporter" in info and info.reporter != none {
-    person-entries.push(("报告人：", to-arr(info.reporter)))
+  if "reporter" in presentation-info and presentation-info.reporter != none {
+    cover-person-groups.push((
+      "报告人：",
+      ensure-array(presentation-info.reporter),
+    ))
   }
-  if "supervisor" in info and info.supervisor != none {
-    person-entries.push(("导师：", to-arr(info.supervisor)))
+  if (
+    "supervisor" in presentation-info and presentation-info.supervisor != none
+  ) {
+    cover-person-groups.push((
+      "导师：",
+      ensure-array(presentation-info.supervisor),
+    ))
   }
 
-  let body = {
+  let title-slide-body = {
     show: std.align.with(center + horizon)
     // 标题框
     block(
@@ -305,49 +342,49 @@
           size: 1.2em,
           fill: self.colors.neutral-lightest,
           weight: "bold",
-          info.title,
+          presentation-info.title,
         )
-        if info.subtitle != none {
+        if presentation-info.subtitle != none {
           parbreak()
           text(
             size: 1.0em,
             fill: self.colors.neutral-lightest,
             weight: "bold",
-            info.subtitle,
+            presentation-info.subtitle,
           )
         }
       },
     )
 
     // 人员列表（每个角色一行，前缀 + 姓名横排，整体居中）
-    for (prefix, persons) in person-entries {
-      align(center, _person-entry(prefix, persons))
+    for (role-label, person-list) in cover-person-groups {
+      align(center, _render-cover-person-grid(role-label, person-list))
     }
     v(0.5em)
 
     // 机构与日期
-    if info.institution != none {
+    if presentation-info.institution != none {
       parbreak()
-      text(size: 0.7em, info.institution)
+      text(size: 0.7em, presentation-info.institution)
     }
-    // date
-    if info.date != none {
+    if presentation-info.date != none {
       parbreak()
       text(size: 0.7em, utils.display-info-date(self))
     }
   }
-  touying-slide(self: self, body)
+  touying-slide(self: self, title-slide-body)
 })
 
 
 
 /// 3. 目录页 (Outline Slide)
 
+/// 目录页基于一级标题生成章节列表，并链接到每个章节起点。
 #let outline-slide(
   config: (:),
   title: utils.i18n-outline-title,
 ) = touying-slide-wrapper(self => {
-  self.store.title = title
+  self.store.header-title = title
   touying-slide(
     self: self,
     config: config,
@@ -356,18 +393,16 @@
       context {
         set text(fill: self.colors.primary-dark, weight: "bold", size: 1.2em)
 
-        // 1. 获取章节数据
-        let sections = _get-sections()
+        let navigation-sections = _collect-navigation-sections()
 
-        // 2. 渲染为标准列表
-        if sections.len() > 0 {
+        if navigation-sections.len() > 0 {
           stack(
             dir: ttb,
             spacing: 1.5em,
-            ..sections
+            ..navigation-sections
               .enumerate()
-              .map(((i, section)) => {
-                let num-circle = box(
+              .map(((section-index, section)) => {
+                let section-number-badge = box(
                   width: 1.1em,
                   height: 1.1em,
                   radius: 50%,
@@ -380,7 +415,7 @@
                       size: 0.75em,
                       top-edge: "bounds",
                       bottom-edge: "bounds",
-                      str(i + 1),
+                      str(section-index + 1),
                     ),
                   ),
                 )
@@ -388,8 +423,8 @@
                   stack(
                     dir: ltr,
                     spacing: 0.5em,
-                    num-circle,
-                    link(section.loc, section.title),
+                    section-number-badge,
+                    link(section.heading-location, section.heading-title),
                   ),
                 )
               }),
@@ -411,7 +446,7 @@
   title: auto,
   ..args,
 ) = touying-slide-wrapper(self => {
-  let body = args.pos().sum(default: none)
+  let section-slide-body = args.pos().sum(default: none)
 
   touying-slide(
     self: self,
@@ -421,14 +456,14 @@
 
       if title != auto {
         title
-        if body != none {
+        if section-slide-body != none {
           parbreak()
           v(0.5em)
           set text(size: 0.8em)
-          body
+          section-slide-body
         }
-      } else if body != none {
-        body
+      } else if section-slide-body != none {
+        section-slide-body
       } else {
         utils.display-current-heading(level: 1)
       }
@@ -439,6 +474,7 @@
 
 /// 5. 焦点页 (Focus Slide)
 
+/// 用纯色背景展示短句或 Q&A，且不计入幻灯片页码。
 #let focus-slide(
   config: (:),
   align: horizon + center,
@@ -462,32 +498,32 @@
 })
 
 
-/// 主题入口与全局配置 (The Architect)
-/// 将所有组件组装在一起
+/// 主题入口与全局配置。
+///
+/// header-title 控制普通页页眉标题；footer-* 参数分别控制页脚中的报告人、
+/// 作者、报告标题与页码计数。
 
 #let shuimu-touying-theme(
   aspect-ratio: "16-9",
   align: horizon,
   display-section-slides: false, // 是否显示章节页
-  title: self => utils.display-current-heading(depth: self.slide-level),
-  // 删除了 unused header-right
-  // 删除了 ununsed progress-bar
-  // 页脚各部分配置（可通过传参修改）
-  footer-a: self => if "reporter" in self.info and self.info.reporter != none {
+  header-title: self => utils.display-current-heading(depth: self.slide-level),
+  footer-reporter: self => if "reporter" in self.info
+    and self.info.reporter != none {
     self.info.reporter
   } else {
     self.info.author
   },
 
-  footer-b: self => self.info.author,
+  footer-author: self => self.info.author,
 
-  footer-c: self => if self.info.short-title == auto {
+  footer-deck-title: self => if self.info.short-title == auto {
     self.info.title
   } else {
     self.info.short-title
   },
 
-  footer-d: context utils.slide-counter.display()
+  footer-slide-counter: context utils.slide-counter.display()
     + " / "
     + utils.last-slide-number,
   ..args,
@@ -500,7 +536,7 @@
     "Songti SC",
   )
   // 定义全局页眉布局
-  let header(self) = {
+  let render-header(self) = {
     set std.align(top)
     set text(font: main-fonts)
     stack(
@@ -508,26 +544,26 @@
       spacing: 0em, // 去除中间的缝隙
 
       // 1. 顶部的导航栏
-      _mini-frames-navigation(self: self),
+      _render-mini-frame-navigation(self: self),
 
       // 2. 下面的幻灯片标题栏
-      utils.call-or-display(self, self.store.header),
+      utils.call-or-display(self, self.store.slide-header),
     )
   }
 
   // 定义全局页脚布局
-  let footer(self) = {
+  let render-footer(self) = {
     set text(font: main-fonts, size: .5em)
     set std.align(center + bottom)
-    utils.call-or-display(self, self.store.footer)
+    utils.call-or-display(self, self.store.footer-bar)
   }
 
   // 初始化 Touying 系统(组装主题)
   show: touying-slides.with(
     config-page(
       ..utils.page-args-from-aspect-ratio(aspect-ratio),
-      header: header,
-      footer: footer,
+      header: render-header,
+      footer: render-footer,
       header-ascent: 0em,
       footer-descent: 0em,
       margin: (top: 4.5em, bottom: 2.5em, x: 2.5em),
@@ -549,17 +585,17 @@
         show footnote.entry: set text(size: 0.6em)
         show heading: set text(fill: self.colors.primary, weight: "black")
         set super(typographic: false) // 关闭字体默认的上标样式，防止冲突
-        show link: it => if type(it.dest) == str {
+        show link: link-element => if type(link-element.dest) == str {
           set text(fill: self.colors.primary)
-          it
+          link-element
         } else {
-          it
+          link-element
         }
         show figure.where(kind: table): set figure.caption(position: top)
         body
       },
       alert: utils.alert-with-primary-color,
-      tblock: _tblock,
+      titled-block: _render-titled-block,
     ),
     config-colors(
       // 参考了清华大学视觉形象识别系统（https://vi.tsinghua.edu.cn/gk/xxbz/scgf.htm）的参数，经过换算后为 #660874
@@ -568,18 +604,16 @@
       neutral-lightest: rgb("#ffffff"),
       neutral-darkest: rgb("#000000"),
     ),
-    // save the variables for later use
+    // 将主题配置保存到 Touying store，供页眉、页脚和单页覆盖逻辑读取。
     config-store(
       align: align,
-      title: title,
-      footer-a: footer-a,
-      footer-b: footer-b,
-      footer-c: footer-c,
-      footer-d: footer-d,
+      header-title: header-title,
+      footer-reporter: footer-reporter,
+      footer-author: footer-author,
+      footer-deck-title: footer-deck-title,
+      footer-slide-counter: footer-slide-counter,
 
-      // 删除了 navigation 键
-
-      header: self => if self.store.title != none {
+      slide-header: self => if self.store.header-title != none {
         block(
           width: 100%,
           height: 1.8em,
@@ -590,42 +624,56 @@
               fill: self.colors.neutral-lightest,
               weight: "bold",
               size: 1.3em,
-              utils.call-or-display(self, self.store.title),
+              utils.call-or-display(self, self.store.header-title),
             ),
             dx: 1.5em,
           ),
         )
       },
 
-      footer: self => {
-        show strong: it => it.body
-        let cell(fill: none, it) = rect(
+      footer-bar: self => {
+        show strong: strong-content => strong-content.body
+        let footer-cell(fill: none, content) = rect(
           width: 100%,
           height: 100%,
           inset: 1mm,
           outset: 0mm,
           fill: fill,
           stroke: none,
-          std.align(horizon, text(fill: self.colors.neutral-lightest, it)),
+          std.align(horizon, text(fill: self.colors.neutral-lightest, content)),
         )
 
-        let footer-a = utils.call-or-display(self, self.store.footer-a)
-        let footer-b = utils.call-or-display(self, self.store.footer-b)
-        let footer-c = utils.call-or-display(self, self.store.footer-c)
-        let footer-d = utils.call-or-display(self, self.store.footer-d)
+        let footer-reporter-content = utils.call-or-display(
+          self,
+          self.store.footer-reporter,
+        )
+        let footer-author-content = utils.call-or-display(
+          self,
+          self.store.footer-author,
+        )
+        let footer-title-content = utils.call-or-display(
+          self,
+          self.store.footer-deck-title,
+        )
+        let footer-counter-content = utils.call-or-display(
+          self,
+          self.store.footer-slide-counter,
+        )
 
         grid(
           columns: (
-            if footer-a != none { 15% } else { 0pt },
-            if footer-b != none { 15% } else { 0pt },
+            if footer-reporter-content != none { 15% } else { 0pt },
+            if footer-author-content != none { 15% } else { 0pt },
             1fr,
             5em,
           ),
           rows: (1.5em, auto),
-          cell(fill: self.colors.primary, if footer-a != none { footer-a }),
-          cell(fill: self.colors.primary, if footer-b != none { footer-b }),
-          cell(fill: self.colors.primary, footer-c),
-          cell(fill: self.colors.primary, footer-d),
+          footer-cell(fill: self.colors.primary, if footer-reporter-content
+            != none { footer-reporter-content }),
+          footer-cell(fill: self.colors.primary, if footer-author-content
+            != none { footer-author-content }),
+          footer-cell(fill: self.colors.primary, footer-title-content),
+          footer-cell(fill: self.colors.primary, footer-counter-content),
         )
       },
     ),
