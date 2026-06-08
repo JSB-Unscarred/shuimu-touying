@@ -57,7 +57,7 @@
 
 /// 辅助函数：获取文档的章节和子页面结构
 /// children 为该章节包含的所有物理页记录（已排除 focus-slide 等标记了 skip 的页面）
-#let _get-sections(self) = {
+#let _get-sections() = {
   let all-headings = query(heading.where(level: 1, outlined: true))
 
   if all-headings.len() == 0 {
@@ -103,7 +103,7 @@
   
   context {
     // 获取章节结构和当前页码
-    let sections = _get-sections(self)
+    let sections = _get-sections()
     let current-page = here().page()
     
     // 计算当前激活的是哪个章节 (Active Section)
@@ -248,9 +248,7 @@
       for person in row {
         cells.push(text(fill: black, person))
       }
-      for unused in range(row.len(), max-cols) {
-        cells.push([])
-      }
+      cells += ([],) * (max-cols - row.len())
 
       start += max-cols
       row-index += 1
@@ -353,7 +351,7 @@
         set text(fill: self.colors.primary-dark, weight: "bold", size: 1.2em)
         
         // 1. 获取章节数据
-        let sections = _get-sections(self)
+        let sections = _get-sections()
         
         // 2. 渲染为标准列表
         if sections.len() > 0 {
