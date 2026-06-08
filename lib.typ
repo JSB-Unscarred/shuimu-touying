@@ -6,6 +6,55 @@
 #import "@preview/touying:0.7.4": *
 
 
+/// 主题颜色配置。
+#let shuimu-colors(
+  primary: rgb("#660874"),
+  primary-dark: rgb("#320439"),
+  neutral-lightest: rgb("#ffffff"),
+  neutral-darkest: rgb("#000000"),
+) = (
+  primary: primary,
+  primary-dark: primary-dark,
+  neutral-lightest: neutral-lightest,
+  neutral-darkest: neutral-darkest,
+)
+
+/// 主题字体与字号配置。
+#let shuimu-fonts(
+  main: ("Linux Libertine", "Palatino", "Noto Serif CJK SC", "Songti SC"),
+  body-size: 20pt,
+  navigation-size: 0.7em,
+  title-slide-title-size: 1.2em,
+  title-slide-subtitle-size: 1.0em,
+  title-slide-info-size: 0.7em,
+  outline-size: 1.2em,
+  outline-number-size: 0.75em,
+  section-title-size: 2.5em,
+  section-body-size: 0.8em,
+  focus-size: 1.5em,
+  footer-size: 0.5em,
+  caption-size: 0.6em,
+  footnote-size: 0.6em,
+  header-title-size: 1.3em,
+) = (
+  main: main,
+  body-size: body-size,
+  navigation-size: navigation-size,
+  title-slide-title-size: title-slide-title-size,
+  title-slide-subtitle-size: title-slide-subtitle-size,
+  title-slide-info-size: title-slide-info-size,
+  outline-size: outline-size,
+  outline-number-size: outline-number-size,
+  section-title-size: section-title-size,
+  section-body-size: section-body-size,
+  focus-size: focus-size,
+  footer-size: footer-size,
+  caption-size: caption-size,
+  footnote-size: footnote-size,
+  header-title-size: header-title-size,
+)
+
+
 /// 基础视觉组件
 
 /// 渲染带标题栏的内容块，用于公式、定理、定义等需要被强调的内容。
@@ -114,6 +163,7 @@
 #let _render-mini-frame-navigation(self: none) = {
   let navigation-background = self.colors.primary-dark
   let navigation-text-color = self.colors.neutral-lightest
+  let fonts = self.store.fonts
 
   context {
     let navigation-sections = _collect-navigation-sections()
@@ -132,7 +182,7 @@
       fill: navigation-background,
       inset: (top: 0.6em, bottom: 0.4em, x: 2em),
       {
-        set text(size: 0.7em)
+        set text(size: fonts.navigation-size)
         set align(left + horizon)
 
         grid(
@@ -260,6 +310,7 @@
 
 /// 将同一角色下的多人姓名拆成固定列数的网格，避免封面人员列表过宽。
 #let _render-cover-person-grid(
+  self: none,
   role-label,
   person-list,
   max-person-columns: 3,
@@ -277,11 +328,12 @@
         person-list.len(),
       ))
 
-      grid-cells.push(text(fill: black, if role-row-index == 0 {
+      grid-cells.push(text(fill: self.colors.neutral-darkest, if role-row-index
+        == 0 {
         role-label
       } else { [] }))
       for person in person-row {
-        grid-cells.push(text(fill: black, person))
+        grid-cells.push(text(fill: self.colors.neutral-darkest, person))
       }
       grid-cells += ([],) * (max-person-columns - person-row.len())
 
@@ -330,6 +382,8 @@
   }
 
   let title-slide-body = {
+    let fonts = self.store.fonts
+
     show: std.align.with(center + horizon)
     // 标题框
     block(
@@ -339,7 +393,7 @@
       breakable: false,
       {
         text(
-          size: 1.2em,
+          size: fonts.title-slide-title-size,
           fill: self.colors.neutral-lightest,
           weight: "bold",
           presentation-info.title,
@@ -347,7 +401,7 @@
         if presentation-info.subtitle != none {
           parbreak()
           text(
-            size: 1.0em,
+            size: fonts.title-slide-subtitle-size,
             fill: self.colors.neutral-lightest,
             weight: "bold",
             presentation-info.subtitle,
@@ -358,18 +412,22 @@
 
     // 人员列表（每个角色一行，前缀 + 姓名横排，整体居中）
     for (role-label, person-list) in cover-person-groups {
-      align(center, _render-cover-person-grid(role-label, person-list))
+      align(center, _render-cover-person-grid(
+        self: self,
+        role-label,
+        person-list,
+      ))
     }
     v(0.5em)
 
     // 机构与日期
     if presentation-info.institution != none {
       parbreak()
-      text(size: 0.7em, presentation-info.institution)
+      text(size: fonts.title-slide-info-size, presentation-info.institution)
     }
     if presentation-info.date != none {
       parbreak()
-      text(size: 0.7em, utils.display-info-date(self))
+      text(size: fonts.title-slide-info-size, utils.display-info-date(self))
     }
   }
   touying-slide(self: self, title-slide-body)
@@ -391,7 +449,13 @@
     std.align(
       self.store.align,
       context {
-        set text(fill: self.colors.primary-dark, weight: "bold", size: 1.2em)
+        let fonts = self.store.fonts
+
+        set text(
+          fill: self.colors.primary-dark,
+          weight: "bold",
+          size: fonts.outline-size,
+        )
 
         let navigation-sections = _collect-navigation-sections()
 
@@ -410,9 +474,9 @@
                   place(
                     center + horizon,
                     text(
-                      fill: white,
+                      fill: self.colors.neutral-lightest,
                       weight: "bold",
-                      size: 0.75em,
+                      size: fonts.outline-number-size,
                       top-edge: "bounds",
                       bottom-edge: "bounds",
                       str(section-index + 1),
@@ -452,14 +516,20 @@
     self: self,
     config: config,
     std.align(center + horizon, {
-      set text(fill: self.colors.primary, weight: "bold", size: 2.5em)
+      let fonts = self.store.fonts
+
+      set text(
+        fill: self.colors.primary,
+        weight: "bold",
+        size: fonts.section-title-size,
+      )
 
       if title != auto {
         title
         if section-slide-body != none {
           parbreak()
           v(0.5em)
-          set text(size: 0.8em)
+          set text(size: fonts.section-body-size)
           section-slide-body
         }
       } else if section-slide-body != none {
@@ -490,7 +560,11 @@
       footer: none,
     ),
   )
-  set text(fill: self.colors.neutral-lightest, weight: "bold", size: 1.5em)
+  set text(
+    fill: self.colors.neutral-lightest,
+    weight: "bold",
+    size: self.store.fonts.focus-size,
+  )
   touying-slide(self: self, config: config, {
     [#hide[#"" <touying-skip-dot>]]
     std.align(align, body)
@@ -506,6 +580,8 @@
 #let shuimu-touying-theme(
   aspect-ratio: "16-9",
   align: horizon,
+  theme-colors: shuimu-colors(),
+  theme-fonts: shuimu-fonts(),
   display-section-slides: false, // 是否显示章节页
   header-title: self => utils.display-current-heading(depth: self.slide-level),
   footer-reporter: self => if "reporter" in self.info
@@ -529,16 +605,11 @@
   ..args,
   body,
 ) = {
-  let main-fonts = (
-    "Linux Libertine",
-    "Palatino",
-    "Noto Serif CJK SC",
-    "Songti SC",
-  )
+  let fonts = theme-fonts
   // 定义全局页眉布局
   let render-header(self) = {
     set std.align(top)
-    set text(font: main-fonts)
+    set text(font: fonts.main)
     stack(
       dir: ttb, // 从上到下排列
       spacing: 0em, // 去除中间的缝隙
@@ -553,7 +624,7 @@
 
   // 定义全局页脚布局
   let render-footer(self) = {
-    set text(font: main-fonts, size: .5em)
+    set text(font: fonts.main, size: fonts.footer-size)
     set std.align(center + bottom)
     utils.call-or-display(self, self.store.footer-bar)
   }
@@ -579,10 +650,10 @@
     ),
     config-methods(
       init: (self: none, body) => {
-        set text(font: main-fonts, size: 20pt)
+        set text(font: fonts.main, size: fonts.body-size)
         set list(marker: components.knob-marker(primary: self.colors.primary))
-        show figure.caption: set text(size: 0.6em)
-        show footnote.entry: set text(size: 0.6em)
+        show figure.caption: set text(size: fonts.caption-size)
+        show footnote.entry: set text(size: fonts.footnote-size)
         show heading: set text(fill: self.colors.primary, weight: "black")
         set super(typographic: false) // 关闭字体默认的上标样式，防止冲突
         show link: link-element => if type(link-element.dest) == str {
@@ -597,16 +668,11 @@
       alert: utils.alert-with-primary-color,
       titled-block: _render-titled-block,
     ),
-    config-colors(
-      // 参考了清华大学视觉形象识别系统（https://vi.tsinghua.edu.cn/gk/xxbz/scgf.htm）的参数，经过换算后为 #660874
-      primary: rgb("#660874"),
-      primary-dark: rgb("#320439"),
-      neutral-lightest: rgb("#ffffff"),
-      neutral-darkest: rgb("#000000"),
-    ),
+    config-colors(..theme-colors),
     // 将主题配置保存到 Touying store，供页眉、页脚和单页覆盖逻辑读取。
     config-store(
       align: align,
+      fonts: fonts,
       header-title: header-title,
       footer-reporter: footer-reporter,
       footer-author: footer-author,
@@ -623,7 +689,7 @@
             text(
               fill: self.colors.neutral-lightest,
               weight: "bold",
-              size: 1.3em,
+              size: self.store.fonts.header-title-size,
               utils.call-or-display(self, self.store.header-title),
             ),
             dx: 1.5em,
