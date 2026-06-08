@@ -233,6 +233,38 @@
 
 /// 2. 封面页 (Title Slide)
 
+#let _person-entry(prefix, persons, max-cols: 3) = {
+  if persons.len() == 0 {
+    none
+  } else {
+    let cells = ()
+
+    let start = 0
+    let row-index = 0
+    while start < persons.len() {
+      let row = persons.slice(start, calc.min(start + max-cols, persons.len()))
+
+      cells.push(text(fill: black, if row-index == 0 { prefix } else { [] }))
+      for person in row {
+        cells.push(text(fill: black, person))
+      }
+      for unused in range(row.len(), max-cols) {
+        cells.push([])
+      }
+
+      start += max-cols
+      row-index += 1
+    }
+
+    grid(
+      columns: (auto,) + (auto,) * max-cols,
+      column-gutter: 0.5em,
+      row-gutter: 0.5em,
+      ..cells,
+    )
+  }
+}
+
 #let title-slide(config: (:), ..args) = touying-slide-wrapper(self => {
   self = utils.merge-dicts(
     self,
@@ -285,15 +317,7 @@
 
     // 人员列表（每个角色一行，前缀 + 姓名横排，整体居中）
     for (prefix, persons) in person-entries {
-      align(center,
-        grid(
-          columns: (auto,) + (auto,) * calc.min(persons.len(), 3),
-          column-gutter: 0.5em,
-          row-gutter: 0.5em,
-          text(fill: black, prefix),
-          ..persons.map(p => text(fill: black, p)),
-        )
-      )
+      align(center, _person-entry(prefix, persons))
     }
     v(0.5em)
     
