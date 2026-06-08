@@ -342,7 +342,6 @@
 #let outline-slide(
   config: (:),
   title: utils.i18n-outline-title,
-  ..args,
 ) = touying-slide-wrapper(self => {
   self.store.title = title
   touying-slide(
@@ -444,7 +443,6 @@
 #let shuimu-touying-theme(
   aspect-ratio: "16-9",
   align: horizon,
-  alpha: 20%, // 目录透明度
   display-section-slides: false, // 是否显示章节页
   title: self => utils.display-current-heading(depth: self.slide-level),
   // 删除了 unused header-right
@@ -545,7 +543,6 @@
     // save the variables for later use
     config-store(
       align: align,
-      alpha: alpha,
       title: title,
       footer-a: footer-a,
       footer-b: footer-b,
