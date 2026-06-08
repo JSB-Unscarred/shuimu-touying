@@ -490,10 +490,7 @@
   let footer(self) = {
     set text(font: main-fonts, size: .5em)
     set std.align(center + bottom)
-    grid(
-      rows: (auto, auto),
-      utils.call-or-display(self, self.store.footer),
-    )
+    utils.call-or-display(self, self.store.footer)
   }
 
   // 初始化 Touying 系统(组装主题)
