@@ -1,4 +1,4 @@
-// ShuimuTouying 
+// ShuimuTouying
 // a THU Touying theme.
 // Authors: Mason Chen
 // Inspired by Stargazer theme
@@ -13,8 +13,8 @@
   block(
     breakable: false,
     grid(
-    columns: 1,
-    row-gutter: 0pt,
+      columns: 1,
+      row-gutter: 0pt,
 
       // 1. 顶部标题栏
       block(
@@ -44,7 +44,7 @@
         inset: (top: 0.4em, bottom: 0.5em, left: 0.5em, right: 0.5em),
         it,
       ),
-    )
+    ),
   )
 }
 
@@ -63,7 +63,9 @@
   if all-headings.len() == 0 {
     ()
   } else {
-    let custom-skip-pages = query(<touying-skip-dot>).map(s => s.location().page())
+    let custom-skip-pages = query(<touying-skip-dot>).map(s => s
+      .location()
+      .page())
     let touying-skip-pages = query(<touying:skip>).map(s => s.location().page())
     let skip-pages = custom-skip-pages + touying-skip-pages
     let heading-pages = all-headings.map(h => h.location().page())
@@ -98,14 +100,14 @@
 
 /// Mini-frames 导航栏
 #let _mini-frames-navigation(self: none) = {
-  let primary-color = self.colors.primary-dark 
+  let primary-color = self.colors.primary-dark
   let text-color = self.colors.neutral-lightest
-  
+
   context {
     // 获取章节结构和当前页码
     let sections = _get-sections()
     let current-page = here().page()
-    
+
     // 计算当前激活的是哪个章节 (Active Section)
     // 逻辑：找到最后一个起始页码小于等于当前页码的章节
     let active-section-index = -1
@@ -114,70 +116,74 @@
         active-section-index = i
       }
     }
-    
+
     block(
-      width: 100%, 
-      fill: primary-color, 
+      width: 100%,
+      fill: primary-color,
       inset: (top: 0.6em, bottom: 0.4em, x: 2em),
       {
         set text(size: 0.7em)
         set align(left + horizon)
-        
+
         grid(
           columns: sections.map(_ => auto),
           column-gutter: 1.5em,
-          
+
           // 使用 enumerate 获取索引，以便判断是否为当前章节
-          ..sections.enumerate().map(((i, section)) => {
-            // A. 判断本列是否需要高亮
-            let is-active-section = (i == active-section-index)
-            
-            // B. 定义颜色：激活章节用纯白，非激活章节用 60% 透明度的白(变暗)
-            let section-color = if is-active-section {
-              text-color
-            } else {
-              text-color.transparentize(60%)
-            }
+          ..sections
+            .enumerate()
+            .map(((i, section)) => {
+              // A. 判断本列是否需要高亮
+              let is-active-section = (i == active-section-index)
 
-            // C. 渲染标题 (应用 section-color)
-            let title = link(
-              section.loc, 
-              text(fill: section-color, weight: "bold", section.title)
-            )
-            
-            // D. 渲染小圆点
-            let dots = if section.children.len() > 0 {
-              stack(
-                dir: ltr,
-                spacing: 4pt,
-                ..section.children.map(child => {
-                  let is-current-page = (child.page == current-page)
+              // B. 定义颜色：激活章节用纯白，非激活章节用 60% 透明度的白(变暗)
+              let section-color = if is-active-section {
+                text-color
+              } else {
+                text-color.transparentize(60%)
+              }
 
-                  link(
-                    child.loc,
-                    box(
-                      circle(
-                        radius: 2.5pt,
-                        stroke: (paint: section-color, thickness: 0.8pt),
-                        fill: if is-current-page { section-color } else { none }
-                      )
-                    )
-                  )
-                })
+              // C. 渲染标题 (应用 section-color)
+              let title = link(
+                section.loc,
+                text(fill: section-color, weight: "bold", section.title),
               )
-            } else {
-              v(5pt) 
-            }
 
-            stack(
-              dir: ttb,
-              spacing: 0.4em,
-              title,
-              dots
-            )
-          })
+              // D. 渲染小圆点
+              let dots = if section.children.len() > 0 {
+                stack(
+                  dir: ltr,
+                  spacing: 4pt,
+                  ..section.children.map(child => {
+                    let is-current-page = (child.page == current-page)
+
+                    link(
+                      child.loc,
+                      box(
+                        circle(
+                          radius: 2.5pt,
+                          stroke: (paint: section-color, thickness: 0.8pt),
+                          fill: if is-current-page { section-color } else {
+                            none
+                          },
+                        ),
+                      ),
+                    )
+                  }),
+                )
+              } else {
+                v(5pt)
+              }
+
+              stack(
+                dir: ttb,
+                spacing: 0.4em,
+                title,
+                dots,
+              )
+            })
         )
-      }
+      },
     )
   }
 }
@@ -189,7 +195,7 @@
 /// 这里定义了不同类型的幻灯片（普通页、封面、目录、章节页、结束页）的逻辑
 
 /// 1. 正文页 (Slide)
-/// 
+///
 #let slide(
   title: auto,
   header: auto,
@@ -217,7 +223,7 @@
   let new-setting = body => {
     show: std.align.with(self.store.align)
     show: setting
-    [#hide[#"" <touying-slide-page>]] //注入物理页签，用于导航栏的页码检测
+    [#hide[#"" <touying-slide-page>]] // 注入物理页签，用于导航栏的页码检测
     body
   }
   touying-slide(
@@ -278,7 +284,7 @@
   let person-entries = ()
   if "author" in info and info.author != none {
     person-entries.push(("作者：", to-arr(info.author)))
-  } 
+  }
   if "reporter" in info and info.reporter != none {
     person-entries.push(("报告人：", to-arr(info.reporter)))
   }
@@ -318,7 +324,7 @@
       align(center, _person-entry(prefix, persons))
     }
     v(0.5em)
-    
+
     // 机构与日期
     if info.institution != none {
       parbreak()
@@ -349,28 +355,49 @@
       self.store.align,
       context {
         set text(fill: self.colors.primary-dark, weight: "bold", size: 1.2em)
-        
+
         // 1. 获取章节数据
         let sections = _get-sections()
-        
+
         // 2. 渲染为标准列表
         if sections.len() > 0 {
           stack(
             dir: ttb,
             spacing: 1.5em,
-            ..sections.enumerate().map(((i, section)) => {
-              let num-circle = box(
-                width: 1.1em, height: 1.1em, radius: 50%,
-                fill: self.colors.primary,
-                place(center + horizon, text(fill: white, weight: "bold", size: 0.75em, top-edge: "bounds", bottom-edge: "bounds", str(i + 1)))
-              )
-              box(stack(dir: ltr, spacing: 0.5em, num-circle, link(section.loc, section.title)))
-            })
+            ..sections
+              .enumerate()
+              .map(((i, section)) => {
+                let num-circle = box(
+                  width: 1.1em,
+                  height: 1.1em,
+                  radius: 50%,
+                  fill: self.colors.primary,
+                  place(
+                    center + horizon,
+                    text(
+                      fill: white,
+                      weight: "bold",
+                      size: 0.75em,
+                      top-edge: "bounds",
+                      bottom-edge: "bounds",
+                      str(i + 1),
+                    ),
+                  ),
+                )
+                box(
+                  stack(
+                    dir: ltr,
+                    spacing: 0.5em,
+                    num-circle,
+                    link(section.loc, section.title),
+                  ),
+                )
+              }),
           )
         } else {
           [No sections found.]
         }
-      }
+      },
     ),
   )
 })
@@ -391,13 +418,13 @@
     config: config,
     std.align(center + horizon, {
       set text(fill: self.colors.primary, weight: "bold", size: 2.5em)
-      
+
       if title != auto {
         title
         if body != none {
           parbreak()
           v(0.5em)
-          set text(size: 0.8em) 
+          set text(size: 0.8em)
           body
         }
       } else if body != none {
@@ -405,7 +432,7 @@
       } else {
         utils.display-current-heading(level: 1)
       }
-    })
+    }),
   )
 })
 
@@ -454,33 +481,37 @@
 
   footer-b: self => self.info.author,
 
-
   footer-c: self => if self.info.short-title == auto {
     self.info.title
   } else {
     self.info.short-title
   },
-  
+
   footer-d: context utils.slide-counter.display()
     + " / "
     + utils.last-slide-number,
   ..args,
   body,
 ) = {
-  let main-fonts = ("Linux Libertine","Palatino","Noto Serif CJK SC","Songti SC")
+  let main-fonts = (
+    "Linux Libertine",
+    "Palatino",
+    "Noto Serif CJK SC",
+    "Songti SC",
+  )
   // 定义全局页眉布局
   let header(self) = {
     set std.align(top)
     set text(font: main-fonts)
     stack(
-      dir: ttb,       // 从上到下排列
-      spacing: 0em,   // 去除中间的缝隙
-      
+      dir: ttb, // 从上到下排列
+      spacing: 0em, // 去除中间的缝隙
+
       // 1. 顶部的导航栏
       _mini-frames-navigation(self: self),
-      
+
       // 2. 下面的幻灯片标题栏
-      utils.call-or-display(self, self.store.header)
+      utils.call-or-display(self, self.store.header),
     )
   }
 
@@ -503,10 +534,10 @@
     ),
     config-common(
       slide-fn: slide,
-      new-section-slide-fn: if display-section-slides { 
-        new-section-slide 
-      } else { 
-        none 
+      new-section-slide-fn: if display-section-slides {
+        new-section-slide
+      } else {
+        none
       },
       receive-body-for-new-section-slide-fn: true,
     ),
@@ -516,7 +547,7 @@
         set list(marker: components.knob-marker(primary: self.colors.primary))
         show figure.caption: set text(size: 0.6em)
         show footnote.entry: set text(size: 0.6em)
-        show heading: set text(fill: self.colors.primary,weight: "black")
+        show heading: set text(fill: self.colors.primary, weight: "black")
         set super(typographic: false) // 关闭字体默认的上标样式，防止冲突
         show link: it => if type(it.dest) == str {
           set text(fill: self.colors.primary)
@@ -531,11 +562,12 @@
       tblock: _tblock,
     ),
     config-colors(
-      primary: rgb("#660874"), //参考了清华大学视觉形象识别系统（https://vi.tsinghua.edu.cn/gk/xxbz/scgf.htm）的参数，经过换算后为#660874
+      // 参考了清华大学视觉形象识别系统（https://vi.tsinghua.edu.cn/gk/xxbz/scgf.htm）的参数，经过换算后为 #660874
+      primary: rgb("#660874"),
       primary-dark: rgb("#320439"),
       neutral-lightest: rgb("#ffffff"),
       neutral-darkest: rgb("#000000"),
-  ),
+    ),
     // save the variables for later use
     config-store(
       align: align,
@@ -546,7 +578,7 @@
       footer-d: footer-d,
 
       // 删除了 navigation 键
-      
+
       header: self => if self.store.title != none {
         block(
           width: 100%,
@@ -564,7 +596,7 @@
           ),
         )
       },
- 
+
       footer: self => {
         show strong: it => it.body
         let cell(fill: none, it) = rect(

@@ -1,4 +1,4 @@
-//#import "@preview/shuimu-touying:0.3.0": *
+// #import "@preview/shuimu-touying:0.3.0": *
 #import "../lib.typ": *
 
 #show: shuimu-touying-theme.with(
@@ -28,30 +28,30 @@
 
 #tblock(
   title: [无编号公式],
-  [$ e^(pi i)+1=0 $]
+  [$ e^(pi i)+1=0 $],
 )
 
 == 工作进度
 
 // 设置*全局*公式编号格式为 (1)，(2)，...
 // 也就是说在这个命令之后的公式都会带上编号，可以随意调整这个命令的位置
-#set math.equation(numbering: "(1)") 
+#set math.equation(numbering: "(1)")
 
 #tblock(
   title: [有编号公式],
-  [$ 0+0=0 $]
+  [$ 0+0=0 $],
 )
 
 #tblock(
   title: [部分无编号公式],
   [#math.equation(block: true, numbering: none)[
-  $ 1 + 1 = 2 $
-]]
+    $ 1 + 1 = 2 $
+  ]],
 )
 
 #tblock(
-  title:[继续编号],
-  [$ 2+2=4 $]
+  title: [继续编号],
+  [$ 2+2=4 $],
 )
 
 #focus-slide([Wake Up!])
@@ -65,10 +65,10 @@
 
 #set align(top) // 参考文献部分应该顶部对齐
 #bibliography(
-  "refs.bib", 
+  "refs.bib",
   title: "参考文献", // 参考文献部分的标题
   full: true, // 是否包括给定参考文献文件中的所有作品，即使它们在文档中没有被引用
-  style: "gb-7714-2015-numeric" // 引文样式
+  style: "gb-7714-2015-numeric", // 引文样式
 )
 
 #focus-slide([
