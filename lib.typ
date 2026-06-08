@@ -3,7 +3,7 @@
 // Authors: Mason Chen
 // Inspired by Stargazer theme
 
-#import "@preview/touying:0.6.1": *
+#import "@preview/touying:0.7.4": *
 
 
 /// 基础视觉组件 (The Bricks)
@@ -494,7 +494,7 @@
   // 初始化 Touying 系统(组装主题)
   show: touying-slides.with(
     config-page(
-      paper: "presentation-" + aspect-ratio,
+      ..utils.page-args-from-aspect-ratio(aspect-ratio),
       header: header,
       footer: footer,
       header-ascent: 0em,
@@ -508,6 +508,7 @@
       } else { 
         none 
       },
+      receive-body-for-new-section-slide-fn: true,
     ),
     config-methods(
       init: (self: none, body) => {
