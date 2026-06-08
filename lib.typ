@@ -426,7 +426,11 @@
   // 删除了 unused header-right
   // 删除了 ununsed progress-bar
   // 页脚各部分配置（可通过传参修改）
-  footer-a: self => self.info.reporter,
+  footer-a: self => if "reporter" in self.info and self.info.reporter != none {
+    self.info.reporter
+  } else {
+    self.info.author
+  },
 
   footer-b: self => self.info.author,
 
