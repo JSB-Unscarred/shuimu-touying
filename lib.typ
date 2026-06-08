@@ -56,7 +56,7 @@
 ))
 
 /// 辅助函数：获取文档的章节和子页面结构
-/// children 为该章节包含的所有物理页码数组（已排除 focus-slide 等标记了 skip 的页面）
+/// children 为该章节包含的所有物理页记录（已排除 focus-slide 等标记了 skip 的页面）
 #let _get-sections(self) = {
   let all-headings = query(heading.where(level: 1, outlined: true))
 
@@ -67,7 +67,8 @@
     let touying-skip-pages = query(<touying:skip>).map(s => s.location().page())
     let skip-pages = custom-skip-pages + touying-skip-pages
     let heading-pages = all-headings.map(h => h.location().page())
-    let slide-pages = query(<touying-slide-page>).map(s => s.location().page())
+    let slide-locs = query(<touying-slide-page>).map(s => s.location())
+    let slide-pages = slide-locs.map(loc => loc.page())
     let known-pages = heading-pages + skip-pages + slide-pages
     let last-known-page = calc.max(..known-pages)
     let sections = ()
@@ -83,7 +84,10 @@
       sections.push((
         title: h.body,
         loc: h.location(),
-        children: range(start-page, end-page).filter(p => p not in skip-pages),
+        children: slide-locs
+          .filter(loc => start-page <= loc.page() and loc.page() < end-page)
+          .filter(loc => loc.page() not in skip-pages)
+          .map(loc => (page: loc.page(), loc: loc)),
       ))
     }
 
@@ -146,11 +150,11 @@
               stack(
                 dir: ltr,
                 spacing: 4pt,
-                ..section.children.map(page-num => {
-                  let is-current-page = (page-num == current-page)
+                ..section.children.map(child => {
+                  let is-current-page = (child.page == current-page)
 
                   link(
-                    section.loc,
+                    child.loc,
                     box(
                       circle(
                         radius: 2.5pt,
